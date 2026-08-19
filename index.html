@@ -255,10 +255,19 @@
   .node[open] > summary::before{transform:rotate(90deg);}
   .node .node-name{font-weight:600;}
   .node .node-name.empty{color:var(--text-dim);font-style:italic;font-weight:500;}
-  .node .node-title{flex:1;display:flex;align-items:baseline;gap:8px;min-width:0;}
+  .node .node-title{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .node .node-title-main{display:flex;align-items:baseline;gap:8px;min-width:0;}
   .node .node-puesto{
     font-size:11.5px;
     font-weight:500;
+    color:var(--text-dim);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .node .node-contact{
+    font-size:11px;
+    font-weight:400;
     color:var(--text-dim);
     white-space:nowrap;
     overflow:hidden;
@@ -415,6 +424,37 @@
     font-family:inherit;
   }
   .field input:focus, .field select:focus{outline:none;border-color:var(--accent);}
+  .auth-status{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12.5px;
+    color:var(--text-dim);
+  }
+  .auth-status .dot{width:7px;height:7px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
+  .auth-status.activa .dot{background:var(--accent);}
+  .auth-status .user-tag{font-weight:600;color:var(--text);}
+  .auth-error{
+    display:none;
+    background:#fbeceb;
+    color:var(--danger);
+    border:1px solid var(--danger);
+    padding:9px 12px;
+    border-radius:8px;
+    font-size:13px;
+    margin-top:4px;
+  }
+  [data-theme="dark"] .auth-error{background:#2b1a17;}
+  .auth-error.show{display:block;}
+  .modo-consulta-badge{
+    font-size:11px;
+    font-weight:600;
+    color:var(--text-dim);
+    background:var(--accent-dim);
+    padding:3px 9px;
+    border-radius:20px;
+    white-space:nowrap;
+  }
   .modal-actions{
     display:flex;
     justify-content:flex-end;
@@ -455,6 +495,11 @@
 <header>
   <h1>📊 Organigramas</h1>
   <div class="header-actions">
+    <div class="auth-status" id="auth-status">
+      <span class="dot"></span>
+      <span id="auth-status-text">Solo consulta</span>
+    </div>
+    <button class="btn-ghost" id="auth-btn">Iniciar sesión</button>
     <button class="icon-btn" id="theme-toggle" title="Cambiar tema">🌓</button>
   </div>
 </header>
@@ -564,6 +609,14 @@
             <input type="text" id="puestoTeamLider" placeholder="Ej. Team Líder de Operaciones">
           </div>
           <div class="field">
+            <label>Número del Team Líder</label>
+            <input type="text" id="teamLiderNumero" placeholder="Ej. 5512345678">
+          </div>
+          <div class="field">
+            <label>Correo del Team Líder</label>
+            <input type="text" id="teamLiderCorreo" placeholder="nombre@empresa.com">
+          </div>
+          <div class="field">
             <label>Gerente</label>
             <input type="text" id="gerenteNombre" list="list-gerente" placeholder="Nombre completo">
           </div>
@@ -574,6 +627,14 @@
           <div class="field">
             <label>Puesto del Gerente</label>
             <input type="text" id="puestoGerente" placeholder="Ej. Gerente de Operaciones">
+          </div>
+          <div class="field">
+            <label>Número del Gerente</label>
+            <input type="text" id="gerenteNumero" placeholder="Ej. 5512345678">
+          </div>
+          <div class="field">
+            <label>Correo del Gerente</label>
+            <input type="text" id="gerenteCorreo" placeholder="nombre@empresa.com">
           </div>
           <div class="field">
             <label>Subgerente</label>
@@ -588,6 +649,14 @@
             <input type="text" id="puestoSubgerente" placeholder="Ej. Subgerente de Operaciones">
           </div>
           <div class="field">
+            <label>Número del Subgerente</label>
+            <input type="text" id="subgerenteNumero" placeholder="Ej. 5512345678">
+          </div>
+          <div class="field">
+            <label>Correo del Subgerente</label>
+            <input type="text" id="subgerenteCorreo" placeholder="nombre@empresa.com">
+          </div>
+          <div class="field">
             <label>Supervisor</label>
             <input type="text" id="supervisorNombre" list="list-supervisor" placeholder="Nombre completo">
           </div>
@@ -598,6 +667,14 @@
           <div class="field">
             <label>Puesto del Supervisor</label>
             <input type="text" id="puestoSupervisor" placeholder="Ej. Supervisor de Tienda">
+          </div>
+          <div class="field">
+            <label>Número del Supervisor</label>
+            <input type="text" id="supervisorNumero" placeholder="Ej. 5512345678">
+          </div>
+          <div class="field">
+            <label>Correo del Supervisor</label>
+            <input type="text" id="supervisorCorreo" placeholder="nombre@empresa.com">
           </div>
         </div>
       </div>
@@ -686,8 +763,12 @@
             <input type="text" id="directorId" placeholder="Ej. BMEXH4017">
           </div>
           <div class="field">
-            <label>Puesto del Director</label>
-            <input type="text" id="puestoDirector" placeholder="Ej. Director de Administración">
+            <label>Número del Director</label>
+            <input type="text" id="directorNumero" placeholder="Ej. 5512345678">
+          </div>
+          <div class="field">
+            <label>Correo del Director</label>
+            <input type="text" id="directorCorreo" placeholder="nombre@empresa.com">
           </div>
           <div class="field">
             <label>Gerente Administrativo</label>
@@ -702,6 +783,14 @@
             <input type="text" id="puestoGerenteAdmin" placeholder="Ej. Gerente Administrativo">
           </div>
           <div class="field">
+            <label>Número del Gerente Administrativo</label>
+            <input type="text" id="gerenteAdminNumero" placeholder="Ej. 5512345678">
+          </div>
+          <div class="field">
+            <label>Correo del Gerente Administrativo</label>
+            <input type="text" id="gerenteAdminCorreo" placeholder="nombre@empresa.com">
+          </div>
+          <div class="field">
             <label>Coordinador</label>
             <input type="text" id="coordinadorNombre" list="list-coordinador" placeholder="Nombre completo">
           </div>
@@ -710,20 +799,12 @@
             <input type="text" id="coordinadorId" placeholder="Ej. BMEXS472">
           </div>
           <div class="field">
-            <label>Puesto del Coordinador</label>
-            <input type="text" id="puestoCoordinador" placeholder="Ej. Coordinador Administrativo">
+            <label>Número del Coordinador</label>
+            <input type="text" id="coordinadorNumero" placeholder="Ej. 5512345678">
           </div>
           <div class="field">
-            <label>Auxiliar</label>
-            <input type="text" id="auxiliarNombre" list="list-auxiliar" placeholder="Nombre completo">
-          </div>
-          <div class="field">
-            <label>ID Auxiliar</label>
-            <input type="text" id="auxiliarId" placeholder="Ej. BMEXS381">
-          </div>
-          <div class="field">
-            <label>Puesto del Auxiliar</label>
-            <input type="text" id="puestoAuxiliar" placeholder="Ej. Auxiliar Administrativo">
+            <label>Correo del Coordinador</label>
+            <input type="text" id="coordinadorCorreo" placeholder="nombre@empresa.com">
           </div>
         </div>
       </div>
@@ -789,7 +870,7 @@
           <label>Nuevo ID (opcional)</label>
           <input type="text" id="reassign-id" placeholder="Déjalo vacío para no cambiarlo">
         </div>
-        <div class="field">
+        <div class="field" id="field-reassign-puesto">
           <label>Nuevo puesto (opcional)</label>
           <input type="text" id="reassign-puesto" placeholder="Déjalo vacío para no cambiarlo">
         </div>
@@ -803,6 +884,32 @@
 </div>
 <datalist id="list-reassign"></datalist>
 
+<!-- ================= MODAL INICIO DE SESIÓN ================= -->
+<div class="overlay" id="overlay-auth">
+  <div class="modal">
+    <h2>Iniciar sesión</h2>
+    <div class="sub">Ingresa tu usuario y contraseña para poder agregar, editar o reasignar. Sin sesión, la aplicación funciona solo en modo de consulta.</div>
+
+    <form id="form-auth">
+      <div class="field-grid" style="margin-top:14px;">
+        <div class="field full">
+          <label>Usuario</label>
+          <input type="text" id="auth-usuario" autocomplete="username" required placeholder="Tu usuario">
+        </div>
+        <div class="field full">
+          <label>Contraseña</label>
+          <input type="password" id="auth-password" autocomplete="current-password" required placeholder="Tu contraseña">
+        </div>
+      </div>
+      <div class="auth-error" id="auth-error">Usuario o contraseña incorrectos.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" id="cancel-auth">Cancelar</button>
+        <button type="submit" class="btn-primary" id="save-auth">Entrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <datalist id="list-teamlider"></datalist>
 <datalist id="list-gerente"></datalist>
 <datalist id="list-subgerente"></datalist>
@@ -814,7 +921,6 @@
 <datalist id="list-director"></datalist>
 <datalist id="list-gerenteadmin"></datalist>
 <datalist id="list-coordinador"></datalist>
-<datalist id="list-auxiliar"></datalist>
 <datalist id="list-puesto"></datalist>
 <datalist id="list-departamento"></datalist>
 
@@ -826,7 +932,7 @@
 // El parámetro ?modulo=administrativo (GET) o modulo:'administrativo' (POST)
 // le dice al backend qué pestaña de la hoja usar.
 // ============================================================
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxcxG5SGjm6doc9UAJ-JrXqVxHPjIA-nFBbBAT7t3fpR7t1ODjQ2SY07EekDO8esb2T/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz2c0jnJUTFjN8oK5p9G-LD2iwC4sjGmJW1JYDsj9XMyBHiYgjrMRojZY96Hr9nGExl/exec';
 const FETCH_TIMEOUT_MS = 20000;
 const DIAS_CONSIDERADA_NUEVA = 7;
 const SIN_ASIGNAR = 'Sin asignar';
@@ -845,6 +951,116 @@ $('theme-toggle').addEventListener('click', () => {
   localStorage.setItem('organigrama-theme', next);
 });
 initTheme();
+
+// ---------- Autenticación (modo edición vs. solo consulta) ----------
+// Cambia/agrega usuarios aquí. Al ser un archivo HTML de un solo archivo,
+// estas credenciales quedan visibles en el código fuente: sirven para
+// evitar ediciones accidentales, no como una capa de seguridad real.
+const CREDENCIALES_EDICION = [
+  { usuario: 'BMEXS2952', password: 'TOSE810917' },
+  { usuario: 'BMEXS2954', password: 'SACE791228' },
+  { usuario: 'BMEXS2964', password: 'CASW841206' },
+  { usuario: 'BMEXS3017', password: 'SASE840723' },
+  { usuario: 'BMEXM4600', password: 'PEMU910507' },
+  { usuario: 'BMEXS5449', password: 'RIRA870803' },
+  { usuario: 'BMEXS5735', password: 'VADM851114' },
+  { usuario: 'BMEXH4017', password: 'MAAD931215' }
+];
+const AUTH_STORAGE_KEY = 'organigrama_sesion';
+
+let sesionActiva = null; // null = sin sesión, { usuario, nombre } = con sesión
+
+function puedeEditar(){
+  return !!sesionActiva;
+}
+
+function actualizarUiAuth(){
+  const status = $('auth-status');
+  const statusText = $('auth-status-text');
+  const btn = $('auth-btn');
+
+  if (sesionActiva){
+    status.classList.add('activa');
+    statusText.innerHTML = 'Modo edición · <span class="user-tag">' + escapeHtml(sesionActiva.nombre || sesionActiva.usuario) + '</span>';
+    btn.textContent = 'Cerrar sesión';
+  } else {
+    status.classList.remove('activa');
+    statusText.textContent = 'Solo consulta';
+    btn.textContent = 'Iniciar sesión';
+  }
+
+  // Refrescar árboles para mostrar/ocultar botones de "Reasignar"
+  if (typeof tiendas !== 'undefined' && tiendas.length) applyFiltersOp();
+  if (typeof colaboradores !== 'undefined' && colaboradores.length) applyFiltersAdm();
+}
+
+function iniciarSesion(usuario, password){
+  const match = CREDENCIALES_EDICION.find(c =>
+    c.usuario.toLowerCase() === usuario.toLowerCase() && c.password === password);
+  if (!match) return false;
+  sesionActiva = { usuario: match.usuario, nombre: match.nombre || match.usuario };
+  sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sesionActiva));
+  return true;
+}
+
+function cerrarSesion(){
+  sesionActiva = null;
+  sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  actualizarUiAuth();
+  showToast('Sesión cerrada. Ahora estás en modo de consulta.');
+}
+
+function restaurarSesion(){
+  try{
+    const raw = sessionStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data && data.usuario) sesionActiva = data;
+  }catch(err){ /* ignorar sesión corrupta */ }
+}
+
+const overlayAuth = $('overlay-auth');
+const formAuth = $('form-auth');
+
+function openAuthModal(){
+  formAuth.reset();
+  $('auth-error').classList.remove('show');
+  overlayAuth.classList.add('open');
+  setTimeout(() => $('auth-usuario').focus(), 50);
+}
+function closeAuthModal(){ overlayAuth.classList.remove('open'); }
+
+$('auth-btn').addEventListener('click', () => {
+  if (sesionActiva) cerrarSesion();
+  else openAuthModal();
+});
+$('cancel-auth').addEventListener('click', closeAuthModal);
+overlayAuth.addEventListener('click', (e) => { if (e.target === overlayAuth) closeAuthModal(); });
+
+formAuth.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const usuario = $('auth-usuario').value.trim();
+  const password = $('auth-password').value;
+  const ok = iniciarSesion(usuario, password);
+  if (!ok){
+    $('auth-error').classList.add('show');
+    return;
+  }
+  closeAuthModal();
+  actualizarUiAuth();
+  showToast('Sesión iniciada. Ya puedes agregar, editar y reasignar ✓');
+});
+
+// Exige sesión antes de ejecutar una acción de edición; si no hay sesión,
+// abre el login y avisa. Devuelve true si ya se puede continuar.
+function exigirSesion(mensaje){
+  if (puedeEditar()) return true;
+  showToast(mensaje || 'Inicia sesión para poder editar', true);
+  openAuthModal();
+  return false;
+}
+
+restaurarSesion();
 
 // ---------- Toast ----------
 function showToast(msg, isError){
@@ -944,7 +1160,7 @@ function countLeaves(node){
   return Object.values(node).reduce((sum, child) => sum + countLeaves(child), 0);
 }
 
-function makeNode(name, count, levelClass, unidad, forceOpen, puesto, onReassign){
+function makeNode(name, count, levelClass, unidad, forceOpen, puesto, contacto, onReassign){
   const det = document.createElement('details');
   det.className = 'node ' + levelClass;
   if (forceOpen) det.open = true;
@@ -952,15 +1168,30 @@ function makeNode(name, count, levelClass, unidad, forceOpen, puesto, onReassign
 
   const title = document.createElement('span');
   title.className = 'node-title';
+
+  const titleMain = document.createElement('span');
+  titleMain.className = 'node-title-main';
   const nameSpan = document.createElement('span');
   nameSpan.className = 'node-name' + (name === SIN_ASIGNAR ? ' empty' : '');
   nameSpan.textContent = name;
-  title.appendChild(nameSpan);
+  titleMain.appendChild(nameSpan);
   if (puesto){
     const puestoSpan = document.createElement('span');
     puestoSpan.className = 'node-puesto';
     puestoSpan.textContent = puesto;
-    title.appendChild(puestoSpan);
+    titleMain.appendChild(puestoSpan);
+  }
+  title.appendChild(titleMain);
+
+  const contactoTexto = [
+    contacto && contacto.numero ? 'Tel. ' + contacto.numero : '',
+    contacto && contacto.correo ? contacto.correo : ''
+  ].filter(Boolean).join(' · ');
+  if (contactoTexto){
+    const contactoSpan = document.createElement('span');
+    contactoSpan.className = 'node-contact';
+    contactoSpan.textContent = contactoTexto;
+    title.appendChild(contactoSpan);
   }
   summary.appendChild(title);
 
@@ -988,16 +1219,15 @@ function makeNode(name, count, levelClass, unidad, forceOpen, puesto, onReassign
 
 // ---------- Reasignación masiva de jerarquía ----------
 const NIVELES_OP = [
-  { campoNombre: 'teamLiderNombre', campoId: 'teamLiderId', campoPuesto: 'puestoTeamLider', label: 'Team Líder' },
-  { campoNombre: 'gerenteNombre', campoId: 'gerenteId', campoPuesto: 'puestoGerente', label: 'Gerente' },
-  { campoNombre: 'subgerenteNombre', campoId: 'subgerenteId', campoPuesto: 'puestoSubgerente', label: 'Subgerente' },
-  { campoNombre: 'supervisorNombre', campoId: 'supervisorId', campoPuesto: 'puestoSupervisor', label: 'Supervisor' }
+  { campoNombre: 'teamLiderNombre', campoId: 'teamLiderId', campoPuesto: 'puestoTeamLider', campoNumero: 'teamLiderNumero', campoCorreo: 'teamLiderCorreo', label: 'Team Líder' },
+  { campoNombre: 'gerenteNombre', campoId: 'gerenteId', campoPuesto: 'puestoGerente', campoNumero: 'gerenteNumero', campoCorreo: 'gerenteCorreo', label: 'Gerente' },
+  { campoNombre: 'subgerenteNombre', campoId: 'subgerenteId', campoPuesto: 'puestoSubgerente', campoNumero: 'subgerenteNumero', campoCorreo: 'subgerenteCorreo', label: 'Subgerente' },
+  { campoNombre: 'supervisorNombre', campoId: 'supervisorId', campoPuesto: 'puestoSupervisor', campoNumero: 'supervisorNumero', campoCorreo: 'supervisorCorreo', label: 'Supervisor' }
 ];
 const NIVELES_ADM = [
-  { campoNombre: 'directorNombre', campoId: 'directorId', campoPuesto: 'puestoDirector', label: 'Director' },
-  { campoNombre: 'gerenteAdminNombre', campoId: 'gerenteAdminId', campoPuesto: 'puestoGerenteAdmin', label: 'Gerente Administrativo' },
-  { campoNombre: 'coordinadorNombre', campoId: 'coordinadorId', campoPuesto: 'puestoCoordinador', label: 'Coordinador' },
-  { campoNombre: 'auxiliarNombre', campoId: 'auxiliarId', campoPuesto: 'puestoAuxiliar', label: 'Auxiliar' }
+  { campoNombre: 'directorNombre', campoId: 'directorId', campoPuesto: null, campoNumero: 'directorNumero', campoCorreo: 'directorCorreo', label: 'Director' },
+  { campoNombre: 'gerenteAdminNombre', campoId: 'gerenteAdminId', campoPuesto: 'puestoGerenteAdmin', campoNumero: 'gerenteAdminNumero', campoCorreo: 'gerenteAdminCorreo', label: 'Gerente Administrativo' },
+  { campoNombre: 'coordinadorNombre', campoId: 'coordinadorId', campoPuesto: null, campoNumero: 'coordinadorNumero', campoCorreo: 'coordinadorCorreo', label: 'Coordinador' }
 ];
 
 function dataFromTienda(t){
@@ -1005,15 +1235,23 @@ function dataFromTienda(t){
     teamLiderNombre: t.teamLiderNombre || '',
     teamLiderId: t.teamLiderId || '',
     puestoTeamLider: t.puestoTeamLider || '',
+    teamLiderNumero: t.teamLiderNumero || '',
+    teamLiderCorreo: t.teamLiderCorreo || '',
     gerenteNombre: t.gerenteNombre || '',
     gerenteId: t.gerenteId || '',
     puestoGerente: t.puestoGerente || '',
+    gerenteNumero: t.gerenteNumero || '',
+    gerenteCorreo: t.gerenteCorreo || '',
     subgerenteNombre: t.subgerenteNombre || '',
     subgerenteId: t.subgerenteId || '',
     puestoSubgerente: t.puestoSubgerente || '',
+    subgerenteNumero: t.subgerenteNumero || '',
+    subgerenteCorreo: t.subgerenteCorreo || '',
     supervisorNombre: t.supervisorNombre || '',
     supervisorId: t.supervisorId || '',
     puestoSupervisor: t.puestoSupervisor || '',
+    supervisorNumero: t.supervisorNumero || '',
+    supervisorCorreo: t.supervisorCorreo || '',
     idTienda: t.idTienda || '',
     sucursal: t.sucursal || '',
     cliente: t.cliente || '',
@@ -1031,16 +1269,17 @@ function dataFromColaborador(c){
   return {
     directorNombre: c.directorNombre || '',
     directorId: c.directorId || '',
-    puestoDirector: c.puestoDirector || '',
+    directorNumero: c.directorNumero || '',
+    directorCorreo: c.directorCorreo || '',
     gerenteAdminNombre: c.gerenteAdminNombre || '',
     gerenteAdminId: c.gerenteAdminId || '',
     puestoGerenteAdmin: c.puestoGerenteAdmin || '',
+    gerenteAdminNumero: c.gerenteAdminNumero || '',
+    gerenteAdminCorreo: c.gerenteAdminCorreo || '',
     coordinadorNombre: c.coordinadorNombre || '',
     coordinadorId: c.coordinadorId || '',
-    puestoCoordinador: c.puestoCoordinador || '',
-    auxiliarNombre: c.auxiliarNombre || '',
-    auxiliarId: c.auxiliarId || '',
-    puestoAuxiliar: c.puestoAuxiliar || '',
+    coordinadorNumero: c.coordinadorNumero || '',
+    coordinadorCorreo: c.coordinadorCorreo || '',
     idEmpleado: c.idEmpleado || '',
     nombreEmpleado: c.nombreEmpleado || '',
     puesto: c.puesto || '',
@@ -1056,6 +1295,7 @@ const overlayReassign = $('overlay-reassign');
 const formReassign = $('form-reassign');
 
 function openReassignModal(modulo, nivelConfig, valorActual){
+  if (!exigirSesion('Inicia sesión para reasignar')) return;
   const sourceList = modulo === 'op' ? tiendas : colaboradores;
   const registros = sourceList.filter(r => (r[nivelConfig.campoNombre] || SIN_ASIGNAR) === valorActual);
   reassignContext = { modulo, nivelConfig, valorActual, registros };
@@ -1067,6 +1307,7 @@ function openReassignModal(modulo, nivelConfig, valorActual){
   $('reassign-title').textContent = 'Reasignar: ' + valorActual;
   $('reassign-sub').textContent = `Se moverán ${registros.length} ${unidad} de "${nivelConfig.label}" a un nuevo responsable.`;
   formReassign.reset();
+  $('field-reassign-puesto').style.display = nivelConfig.campoPuesto ? '' : 'none';
 
   const listEl = $('list-reassign');
   listEl.innerHTML = '';
@@ -1086,6 +1327,7 @@ overlayReassign.addEventListener('click', (e) => { if (e.target === overlayReass
 formReassign.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!reassignContext) return;
+  if (!exigirSesion('Inicia sesión para reasignar')) return;
 
   const nuevoNombre = $('reassign-nombre').value.trim();
   const nuevoId = $('reassign-id').value.trim();
@@ -1103,7 +1345,7 @@ formReassign.addEventListener('submit', async (e) => {
     const data = modulo === 'op' ? dataFromTienda(r) : dataFromColaborador(r);
     data[nivelConfig.campoNombre] = nuevoNombre;
     if (nuevoId) data[nivelConfig.campoId] = nuevoId;
-    if (nuevoPuesto) data[nivelConfig.campoPuesto] = nuevoPuesto;
+    if (nuevoPuesto && nivelConfig.campoPuesto) data[nivelConfig.campoPuesto] = nuevoPuesto;
 
     try{
       const payload = { modulo: modulo === 'op' ? 'operaciones' : 'administrativo', action: 'update', rowIndex: r.rowIndex, data };
@@ -1244,8 +1486,8 @@ function applyFiltersOp(){
     if (!q) return true;
     const haystack = [
       t.sucursal, t.cliente, t.ciudad, t.estado, t.idTienda,
-      t.teamLiderNombre, t.puestoTeamLider, t.gerenteNombre, t.puestoGerente,
-      t.subgerenteNombre, t.puestoSubgerente, t.supervisorNombre, t.puestoSupervisor
+      t.teamLiderNombre, t.puestoTeamLider, t.teamLiderCorreo, t.gerenteNombre, t.puestoGerente, t.gerenteCorreo,
+      t.subgerenteNombre, t.puestoSubgerente, t.subgerenteCorreo, t.supervisorNombre, t.puestoSupervisor, t.supervisorCorreo
     ].join(' ').toLowerCase();
     return haystack.includes(q);
   });
@@ -1260,6 +1502,7 @@ $('refresh-op').addEventListener('click', loadOperaciones);
 function buildTreeOp(list){
   const tree = {};
   const puestos = { teamLider:{}, gerente:{}, subgerente:{}, supervisor:{} };
+  const contactos = { teamLider:{}, gerente:{}, subgerente:{}, supervisor:{} };
   list.forEach(t => {
     const tl = t.teamLiderNombre || SIN_ASIGNAR;
     const ge = t.gerenteNombre || SIN_ASIGNAR;
@@ -1274,8 +1517,12 @@ function buildTreeOp(list){
     if (t.puestoGerente && !puestos.gerente[ge]) puestos.gerente[ge] = t.puestoGerente;
     if (t.puestoSubgerente && !puestos.subgerente[sg]) puestos.subgerente[sg] = t.puestoSubgerente;
     if (t.puestoSupervisor && !puestos.supervisor[su]) puestos.supervisor[su] = t.puestoSupervisor;
+    if ((t.teamLiderNumero || t.teamLiderCorreo) && !contactos.teamLider[tl]) contactos.teamLider[tl] = { numero: t.teamLiderNumero, correo: t.teamLiderCorreo };
+    if ((t.gerenteNumero || t.gerenteCorreo) && !contactos.gerente[ge]) contactos.gerente[ge] = { numero: t.gerenteNumero, correo: t.gerenteCorreo };
+    if ((t.subgerenteNumero || t.subgerenteCorreo) && !contactos.subgerente[sg]) contactos.subgerente[sg] = { numero: t.subgerenteNumero, correo: t.subgerenteCorreo };
+    if ((t.supervisorNumero || t.supervisorCorreo) && !contactos.supervisor[su]) contactos.supervisor[su] = { numero: t.supervisorNumero, correo: t.supervisorCorreo };
   });
-  return { tree, puestos };
+  return { tree, puestos, contactos };
 }
 
 function renderTienda(t){
@@ -1294,32 +1541,32 @@ function renderTienda(t){
   return row;
 }
 
-function renderTreeOp(tree, puestos, forceOpen){
+function renderTreeOp(tree, puestos, contactos, forceOpen){
   const container = document.createElement('div');
   container.className = 'tree';
 
   sortedKeys(tree).forEach(tl => {
     const gerentes = tree[tl];
-    const nodeTl = makeNode(tl, countLeaves(gerentes), 'level-1', 'tienda', forceOpen, puestos.teamLider[tl] || (tl !== SIN_ASIGNAR ? 'Team Líder' : ''), () => openReassignModal('op', NIVELES_OP[0], tl));
+    const nodeTl = makeNode(tl, countLeaves(gerentes), 'level-1', 'tienda', forceOpen, puestos.teamLider[tl] || (tl !== SIN_ASIGNAR ? 'Team Líder' : ''), contactos.teamLider[tl], puedeEditar() ? () => openReassignModal('op', NIVELES_OP[0], tl) : null);
     const childrenTl = document.createElement('div');
     childrenTl.className = 'children';
 
     sortedKeys(gerentes).forEach(ge => {
       const subgerentes = gerentes[ge];
-      const nodeGe = makeNode(ge, countLeaves(subgerentes), 'level-2', 'tienda', forceOpen, puestos.gerente[ge] || (ge !== SIN_ASIGNAR ? 'Gerente' : ''), () => openReassignModal('op', NIVELES_OP[1], ge));
+      const nodeGe = makeNode(ge, countLeaves(subgerentes), 'level-2', 'tienda', forceOpen, puestos.gerente[ge] || (ge !== SIN_ASIGNAR ? 'Gerente' : ''), contactos.gerente[ge], puedeEditar() ? () => openReassignModal('op', NIVELES_OP[1], ge) : null);
       const childrenGe = document.createElement('div');
       childrenGe.className = 'children';
 
       sortedKeys(subgerentes).forEach(sg => {
         const supervisores = subgerentes[sg];
-        const nodeSg = makeNode(sg, countLeaves(supervisores), 'level-3', 'tienda', forceOpen, puestos.subgerente[sg] || (sg !== SIN_ASIGNAR ? 'Subgerente' : ''), () => openReassignModal('op', NIVELES_OP[2], sg));
+        const nodeSg = makeNode(sg, countLeaves(supervisores), 'level-3', 'tienda', forceOpen, puestos.subgerente[sg] || (sg !== SIN_ASIGNAR ? 'Subgerente' : ''), contactos.subgerente[sg], puedeEditar() ? () => openReassignModal('op', NIVELES_OP[2], sg) : null);
         const childrenSg = document.createElement('div');
         childrenSg.className = 'children';
 
         sortedKeys(supervisores).forEach(su => {
           const tiendasList = supervisores[su].slice().sort((a, b) =>
             (a.sucursal || '').localeCompare(b.sucursal || '', 'es'));
-          const nodeSu = makeNode(su, tiendasList.length, 'level-4', 'tienda', forceOpen, puestos.supervisor[su] || (su !== SIN_ASIGNAR ? 'Supervisor' : ''), () => openReassignModal('op', NIVELES_OP[3], su));
+          const nodeSu = makeNode(su, tiendasList.length, 'level-4', 'tienda', forceOpen, puestos.supervisor[su] || (su !== SIN_ASIGNAR ? 'Supervisor' : ''), contactos.supervisor[su], puedeEditar() ? () => openReassignModal('op', NIVELES_OP[3], su) : null);
           const wrap = document.createElement('div');
           wrap.className = 'children leaf-list';
           tiendasList.forEach(t => wrap.appendChild(renderTienda(t)));
@@ -1351,8 +1598,8 @@ function renderGridOp(list){
   }
   $('empty-op').style.display = 'none';
   const hasActiveFilter = !!($('search-op').value.trim() || $('filter-cliente-op').value || $('filter-estatus-op').value);
-  const { tree, puestos } = buildTreeOp(list);
-  grid.appendChild(renderTreeOp(tree, puestos, hasActiveFilter));
+  const { tree, puestos, contactos } = buildTreeOp(list);
+  grid.appendChild(renderTreeOp(tree, puestos, contactos, hasActiveFilter));
 }
 
 $('expand-op').addEventListener('click', () => {
@@ -1367,25 +1614,41 @@ let editingRowIndexOp = null;
 const overlayOp = $('overlay-op');
 const formOp = $('form-op');
 
+function aplicarModoSoloLectura(formEl, saveBtn, soloLectura){
+  formEl.querySelectorAll('input, select').forEach(el => { el.disabled = soloLectura; });
+  saveBtn.style.display = soloLectura ? 'none' : '';
+}
+
 function openModalOp(tienda){
   formOp.reset();
+  const soloLectura = !!tienda && !puedeEditar();
   if (tienda){
     editingRowIndexOp = tienda.rowIndex;
-    $('modal-title-op').textContent = 'Editar tienda';
-    $('modal-sub-op').textContent = 'Actualiza la jerarquía o los datos de esta tienda.';
+    $('modal-title-op').textContent = soloLectura ? 'Ver tienda' : 'Editar tienda';
+    $('modal-sub-op').textContent = soloLectura
+      ? 'Inicia sesión para poder editar esta tienda.'
+      : 'Actualiza la jerarquía o los datos de esta tienda.';
     $('rowIndex-op').value = tienda.rowIndex;
     $('teamLiderNombre').value = tienda.teamLiderNombre || '';
     $('teamLiderId').value = tienda.teamLiderId || '';
     $('puestoTeamLider').value = tienda.puestoTeamLider || '';
+    $('teamLiderNumero').value = tienda.teamLiderNumero || '';
+    $('teamLiderCorreo').value = tienda.teamLiderCorreo || '';
     $('gerenteNombre').value = tienda.gerenteNombre || '';
     $('gerenteId').value = tienda.gerenteId || '';
     $('puestoGerente').value = tienda.puestoGerente || '';
+    $('gerenteNumero').value = tienda.gerenteNumero || '';
+    $('gerenteCorreo').value = tienda.gerenteCorreo || '';
     $('subgerenteNombre').value = tienda.subgerenteNombre || '';
     $('subgerenteId').value = tienda.subgerenteId || '';
     $('puestoSubgerente').value = tienda.puestoSubgerente || '';
+    $('subgerenteNumero').value = tienda.subgerenteNumero || '';
+    $('subgerenteCorreo').value = tienda.subgerenteCorreo || '';
     $('supervisorNombre').value = tienda.supervisorNombre || '';
     $('supervisorId').value = tienda.supervisorId || '';
     $('puestoSupervisor').value = tienda.puestoSupervisor || '';
+    $('supervisorNumero').value = tienda.supervisorNumero || '';
+    $('supervisorCorreo').value = tienda.supervisorCorreo || '';
     $('idTienda').value = tienda.idTienda || '';
     $('sucursal').value = tienda.sucursal || '';
     $('cliente').value = tienda.cliente || '';
@@ -1413,30 +1676,43 @@ function openModalOp(tienda){
     $('estatus-op').value = 'ACTIVA';
     $('modal-fechas-op').style.display = 'none';
   }
+  aplicarModoSoloLectura(formOp, $('save-op'), soloLectura);
   overlayOp.classList.add('open');
 }
 function closeModalOp(){ overlayOp.classList.remove('open'); }
 
-$('add-op').addEventListener('click', () => openModalOp(null));
+$('add-op').addEventListener('click', () => {
+  if (!exigirSesion('Inicia sesión para agregar una tienda')) return;
+  openModalOp(null);
+});
 $('cancel-op').addEventListener('click', closeModalOp);
 overlayOp.addEventListener('click', (e) => { if (e.target === overlayOp) closeModalOp(); });
 
 formOp.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!exigirSesion('Inicia sesión para guardar cambios')) return;
 
   const data = {
     teamLiderNombre: $('teamLiderNombre').value.trim(),
     teamLiderId: $('teamLiderId').value.trim(),
     puestoTeamLider: $('puestoTeamLider').value.trim(),
+    teamLiderNumero: $('teamLiderNumero').value.trim(),
+    teamLiderCorreo: $('teamLiderCorreo').value.trim(),
     gerenteNombre: $('gerenteNombre').value.trim(),
     gerenteId: $('gerenteId').value.trim(),
     puestoGerente: $('puestoGerente').value.trim(),
+    gerenteNumero: $('gerenteNumero').value.trim(),
+    gerenteCorreo: $('gerenteCorreo').value.trim(),
     subgerenteNombre: $('subgerenteNombre').value.trim(),
     subgerenteId: $('subgerenteId').value.trim(),
     puestoSubgerente: $('puestoSubgerente').value.trim(),
+    subgerenteNumero: $('subgerenteNumero').value.trim(),
+    subgerenteCorreo: $('subgerenteCorreo').value.trim(),
     supervisorNombre: $('supervisorNombre').value.trim(),
     supervisorId: $('supervisorId').value.trim(),
     puestoSupervisor: $('puestoSupervisor').value.trim(),
+    supervisorNumero: $('supervisorNumero').value.trim(),
+    supervisorCorreo: $('supervisorCorreo').value.trim(),
     idTienda: $('idTienda').value.trim(),
     sucursal: $('sucursal').value.trim(),
     cliente: $('cliente').value.trim(),
@@ -1540,7 +1816,6 @@ function populateDatalistsAdm(){
   fill('list-director', colaboradores.map(c => c.directorNombre));
   fill('list-gerenteadmin', colaboradores.map(c => c.gerenteAdminNombre));
   fill('list-coordinador', colaboradores.map(c => c.coordinadorNombre));
-  fill('list-auxiliar', colaboradores.map(c => c.auxiliarNombre));
   fill('list-puesto', colaboradores.map(c => c.puesto));
   fill('list-departamento', colaboradores.map(c => c.departamento));
 }
@@ -1586,8 +1861,8 @@ function applyFiltersAdm(){
     if (!q) return true;
     const haystack = [
       c.nombreEmpleado, c.puesto, c.departamento, c.correo, c.idEmpleado,
-      c.directorNombre, c.puestoDirector, c.gerenteAdminNombre, c.puestoGerenteAdmin,
-      c.coordinadorNombre, c.puestoCoordinador, c.auxiliarNombre, c.puestoAuxiliar
+      c.directorNombre, c.directorCorreo, c.gerenteAdminNombre, c.puestoGerenteAdmin, c.gerenteAdminCorreo,
+      c.coordinadorNombre, c.coordinadorCorreo
     ].join(' ').toLowerCase();
     return haystack.includes(q);
   });
@@ -1601,23 +1876,22 @@ $('refresh-adm').addEventListener('click', loadAdministrativo);
 
 function buildTreeAdm(list){
   const tree = {};
-  const puestos = { director:{}, gerenteAdmin:{}, coordinador:{}, auxiliar:{} };
+  const puestos = { director:{}, gerenteAdmin:{}, coordinador:{} };
+  const contactos = { director:{}, gerenteAdmin:{}, coordinador:{} };
   list.forEach(c => {
     const di = c.directorNombre || SIN_ASIGNAR;
     const ga = c.gerenteAdminNombre || SIN_ASIGNAR;
     const co = c.coordinadorNombre || SIN_ASIGNAR;
-    const au = c.auxiliarNombre || SIN_ASIGNAR;
     tree[di] = tree[di] || {};
     tree[di][ga] = tree[di][ga] || {};
-    tree[di][ga][co] = tree[di][ga][co] || {};
-    tree[di][ga][co][au] = tree[di][ga][co][au] || [];
-    tree[di][ga][co][au].push(c);
-    if (c.puestoDirector && !puestos.director[di]) puestos.director[di] = c.puestoDirector;
+    tree[di][ga][co] = tree[di][ga][co] || [];
+    tree[di][ga][co].push(c);
     if (c.puestoGerenteAdmin && !puestos.gerenteAdmin[ga]) puestos.gerenteAdmin[ga] = c.puestoGerenteAdmin;
-    if (c.puestoCoordinador && !puestos.coordinador[co]) puestos.coordinador[co] = c.puestoCoordinador;
-    if (c.puestoAuxiliar && !puestos.auxiliar[au]) puestos.auxiliar[au] = c.puestoAuxiliar;
+    if ((c.directorNumero || c.directorCorreo) && !contactos.director[di]) contactos.director[di] = { numero: c.directorNumero, correo: c.directorCorreo };
+    if ((c.gerenteAdminNumero || c.gerenteAdminCorreo) && !contactos.gerenteAdmin[ga]) contactos.gerenteAdmin[ga] = { numero: c.gerenteAdminNumero, correo: c.gerenteAdminCorreo };
+    if ((c.coordinadorNumero || c.coordinadorCorreo) && !contactos.coordinador[co]) contactos.coordinador[co] = { numero: c.coordinadorNumero, correo: c.coordinadorCorreo };
   });
-  return { tree, puestos };
+  return { tree, puestos, contactos };
 }
 
 function renderColaborador(c){
@@ -1636,40 +1910,30 @@ function renderColaborador(c){
   return row;
 }
 
-function renderTreeAdm(tree, puestos, forceOpen){
+function renderTreeAdm(tree, puestos, contactos, forceOpen){
   const container = document.createElement('div');
   container.className = 'tree';
 
   sortedKeys(tree).forEach(di => {
     const gerentes = tree[di];
-    const nodeDi = makeNode(di, countLeaves(gerentes), 'level-1', 'colaborador', forceOpen, puestos.director[di] || (di !== SIN_ASIGNAR ? 'Director' : ''), () => openReassignModal('adm', NIVELES_ADM[0], di));
+    const nodeDi = makeNode(di, countLeaves(gerentes), 'level-1', 'colaborador', forceOpen, di !== SIN_ASIGNAR ? 'Director' : '', contactos.director[di], puedeEditar() ? () => openReassignModal('adm', NIVELES_ADM[0], di) : null);
     const childrenDi = document.createElement('div');
     childrenDi.className = 'children';
 
     sortedKeys(gerentes).forEach(ga => {
       const coordinadores = gerentes[ga];
-      const nodeGa = makeNode(ga, countLeaves(coordinadores), 'level-2', 'colaborador', forceOpen, puestos.gerenteAdmin[ga] || (ga !== SIN_ASIGNAR ? 'Gerente Administrativo' : ''), () => openReassignModal('adm', NIVELES_ADM[1], ga));
+      const nodeGa = makeNode(ga, countLeaves(coordinadores), 'level-2', 'colaborador', forceOpen, puestos.gerenteAdmin[ga] || (ga !== SIN_ASIGNAR ? 'Gerente Administrativo' : ''), contactos.gerenteAdmin[ga], puedeEditar() ? () => openReassignModal('adm', NIVELES_ADM[1], ga) : null);
       const childrenGa = document.createElement('div');
       childrenGa.className = 'children';
 
       sortedKeys(coordinadores).forEach(co => {
-        const auxiliares = coordinadores[co];
-        const nodeCo = makeNode(co, countLeaves(auxiliares), 'level-3', 'colaborador', forceOpen, puestos.coordinador[co] || (co !== SIN_ASIGNAR ? 'Coordinador' : ''), () => openReassignModal('adm', NIVELES_ADM[2], co));
-        const childrenCo = document.createElement('div');
-        childrenCo.className = 'children';
-
-        sortedKeys(auxiliares).forEach(au => {
-          const lista = auxiliares[au].slice().sort((a, b) =>
-            (a.nombreEmpleado || '').localeCompare(b.nombreEmpleado || '', 'es'));
-          const nodeAu = makeNode(au, lista.length, 'level-4', 'colaborador', forceOpen, puestos.auxiliar[au] || (au !== SIN_ASIGNAR ? 'Auxiliar' : ''), () => openReassignModal('adm', NIVELES_ADM[3], au));
-          const wrap = document.createElement('div');
-          wrap.className = 'children leaf-list';
-          lista.forEach(c => wrap.appendChild(renderColaborador(c)));
-          nodeAu.appendChild(wrap);
-          childrenCo.appendChild(nodeAu);
-        });
-
-        nodeCo.appendChild(childrenCo);
+        const lista = coordinadores[co].slice().sort((a, b) =>
+          (a.nombreEmpleado || '').localeCompare(b.nombreEmpleado || '', 'es'));
+        const nodeCo = makeNode(co, lista.length, 'level-3', 'colaborador', forceOpen, co !== SIN_ASIGNAR ? 'Coordinador' : '', contactos.coordinador[co], puedeEditar() ? () => openReassignModal('adm', NIVELES_ADM[2], co) : null);
+        const wrap = document.createElement('div');
+        wrap.className = 'children leaf-list';
+        lista.forEach(c => wrap.appendChild(renderColaborador(c)));
+        nodeCo.appendChild(wrap);
         childrenGa.appendChild(nodeCo);
       });
 
@@ -1693,8 +1957,8 @@ function renderGridAdm(list){
   }
   $('empty-adm').style.display = 'none';
   const hasActiveFilter = !!($('search-adm').value.trim() || $('filter-departamento-adm').value || $('filter-estatus-adm').value);
-  const { tree, puestos } = buildTreeAdm(list);
-  grid.appendChild(renderTreeAdm(tree, puestos, hasActiveFilter));
+  const { tree, puestos, contactos } = buildTreeAdm(list);
+  grid.appendChild(renderTreeAdm(tree, puestos, contactos, hasActiveFilter));
 }
 
 $('expand-adm').addEventListener('click', () => {
@@ -1711,23 +1975,27 @@ const formAdm = $('form-adm');
 
 function openModalAdm(colaborador){
   formAdm.reset();
+  const soloLectura = !!colaborador && !puedeEditar();
   if (colaborador){
     editingRowIndexAdm = colaborador.rowIndex;
-    $('modal-title-adm').textContent = 'Editar colaborador';
-    $('modal-sub-adm').textContent = 'Actualiza la jerarquía o los datos de este colaborador.';
+    $('modal-title-adm').textContent = soloLectura ? 'Ver colaborador' : 'Editar colaborador';
+    $('modal-sub-adm').textContent = soloLectura
+      ? 'Inicia sesión para poder editar este colaborador.'
+      : 'Actualiza la jerarquía o los datos de este colaborador.';
     $('rowIndex-adm').value = colaborador.rowIndex;
     $('directorNombre').value = colaborador.directorNombre || '';
     $('directorId').value = colaborador.directorId || '';
-    $('puestoDirector').value = colaborador.puestoDirector || '';
+    $('directorNumero').value = colaborador.directorNumero || '';
+    $('directorCorreo').value = colaborador.directorCorreo || '';
     $('gerenteAdminNombre').value = colaborador.gerenteAdminNombre || '';
     $('gerenteAdminId').value = colaborador.gerenteAdminId || '';
     $('puestoGerenteAdmin').value = colaborador.puestoGerenteAdmin || '';
+    $('gerenteAdminNumero').value = colaborador.gerenteAdminNumero || '';
+    $('gerenteAdminCorreo').value = colaborador.gerenteAdminCorreo || '';
     $('coordinadorNombre').value = colaborador.coordinadorNombre || '';
     $('coordinadorId').value = colaborador.coordinadorId || '';
-    $('puestoCoordinador').value = colaborador.puestoCoordinador || '';
-    $('auxiliarNombre').value = colaborador.auxiliarNombre || '';
-    $('auxiliarId').value = colaborador.auxiliarId || '';
-    $('puestoAuxiliar').value = colaborador.puestoAuxiliar || '';
+    $('coordinadorNumero').value = colaborador.coordinadorNumero || '';
+    $('coordinadorCorreo').value = colaborador.coordinadorCorreo || '';
     $('idEmpleado').value = colaborador.idEmpleado || '';
     $('nombreEmpleado').value = colaborador.nombreEmpleado || '';
     $('puesto').value = colaborador.puesto || '';
@@ -1752,30 +2020,36 @@ function openModalAdm(colaborador){
     $('estatus-adm').value = 'ACTIVO';
     $('modal-fechas-adm').style.display = 'none';
   }
+  aplicarModoSoloLectura(formAdm, $('save-adm'), soloLectura);
   overlayAdm.classList.add('open');
 }
 function closeModalAdm(){ overlayAdm.classList.remove('open'); }
 
-$('add-adm').addEventListener('click', () => openModalAdm(null));
+$('add-adm').addEventListener('click', () => {
+  if (!exigirSesion('Inicia sesión para agregar un colaborador')) return;
+  openModalAdm(null);
+});
 $('cancel-adm').addEventListener('click', closeModalAdm);
 overlayAdm.addEventListener('click', (e) => { if (e.target === overlayAdm) closeModalAdm(); });
 
 formAdm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!exigirSesion('Inicia sesión para guardar cambios')) return;
 
   const data = {
     directorNombre: $('directorNombre').value.trim(),
     directorId: $('directorId').value.trim(),
-    puestoDirector: $('puestoDirector').value.trim(),
+    directorNumero: $('directorNumero').value.trim(),
+    directorCorreo: $('directorCorreo').value.trim(),
     gerenteAdminNombre: $('gerenteAdminNombre').value.trim(),
     gerenteAdminId: $('gerenteAdminId').value.trim(),
     puestoGerenteAdmin: $('puestoGerenteAdmin').value.trim(),
+    gerenteAdminNumero: $('gerenteAdminNumero').value.trim(),
+    gerenteAdminCorreo: $('gerenteAdminCorreo').value.trim(),
     coordinadorNombre: $('coordinadorNombre').value.trim(),
     coordinadorId: $('coordinadorId').value.trim(),
-    puestoCoordinador: $('puestoCoordinador').value.trim(),
-    auxiliarNombre: $('auxiliarNombre').value.trim(),
-    auxiliarId: $('auxiliarId').value.trim(),
-    puestoAuxiliar: $('puestoAuxiliar').value.trim(),
+    coordinadorNumero: $('coordinadorNumero').value.trim(),
+    coordinadorCorreo: $('coordinadorCorreo').value.trim(),
     idEmpleado: $('idEmpleado').value.trim(),
     nombreEmpleado: $('nombreEmpleado').value.trim(),
     puesto: $('puesto').value.trim(),
@@ -1811,6 +2085,7 @@ formAdm.addEventListener('submit', async (e) => {
 });
 
 // ---------- Init ----------
+actualizarUiAuth();
 loadOperaciones(); // el módulo Administrativo se carga la primera vez que se abre su pestaña
 </script>
 
