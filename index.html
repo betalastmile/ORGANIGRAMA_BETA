@@ -264,6 +264,18 @@
     overflow:hidden;
     text-overflow:ellipsis;
   }
+  .btn-reassign{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    font-size:11px;
+    font-weight:600;
+    padding:5px 10px;
+    border-radius:20px;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .btn-reassign:hover{color:var(--accent);border-color:var(--accent);}
   .node .count{
     font-size:11px;
     color:var(--accent);
@@ -761,6 +773,36 @@
   </div>
 </div>
 
+<!-- ================= MODAL REASIGNAR JERARQUÍA ================= -->
+<div class="overlay" id="overlay-reassign">
+  <div class="modal">
+    <h2 id="reassign-title">Reasignar</h2>
+    <div class="sub" id="reassign-sub"></div>
+
+    <form id="form-reassign">
+      <div class="field-grid" style="margin-top:14px;">
+        <div class="field">
+          <label>Nuevo responsable (nombre)</label>
+          <input type="text" id="reassign-nombre" list="list-reassign" required placeholder="Nombre completo">
+        </div>
+        <div class="field">
+          <label>Nuevo ID (opcional)</label>
+          <input type="text" id="reassign-id" placeholder="Déjalo vacío para no cambiarlo">
+        </div>
+        <div class="field">
+          <label>Nuevo puesto (opcional)</label>
+          <input type="text" id="reassign-puesto" placeholder="Déjalo vacío para no cambiarlo">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" id="cancel-reassign">Cancelar</button>
+        <button type="submit" class="btn-primary" id="save-reassign">Reasignar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<datalist id="list-reassign"></datalist>
+
 <datalist id="list-teamlider"></datalist>
 <datalist id="list-gerente"></datalist>
 <datalist id="list-subgerente"></datalist>
@@ -784,7 +826,7 @@
 // El parámetro ?modulo=administrativo (GET) o modulo:'administrativo' (POST)
 // le dice al backend qué pestaña de la hoja usar.
 // ============================================================
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxNT0Td0bxHpRqdqX7lBUNHlbM0mKkDyftKAX-KhwZ_sPifWMf3AMLTdKD1YrNChMa1/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQLB7M5kfRXBHqcLQH9QJx-5xMurOiItgQfrx844KsfJRZCKhzFCfjQ7OsKTV88a4b/exec';
 const FETCH_TIMEOUT_MS = 20000;
 const DIAS_CONSIDERADA_NUEVA = 7;
 const SIN_ASIGNAR = 'Sin asignar';
@@ -902,23 +944,187 @@ function countLeaves(node){
   return Object.values(node).reduce((sum, child) => sum + countLeaves(child), 0);
 }
 
-function makeNode(name, count, levelClass, unidad, forceOpen, puesto){
+function makeNode(name, count, levelClass, unidad, forceOpen, puesto, onReassign){
   const det = document.createElement('details');
   det.className = 'node ' + levelClass;
   if (forceOpen) det.open = true;
   const summary = document.createElement('summary');
-  summary.innerHTML = `
-    <span class="node-title">
-      <span class="node-name ${name === SIN_ASIGNAR ? 'empty' : ''}">${escapeHtml(name)}</span>
-      ${puesto ? `<span class="node-puesto">${escapeHtml(puesto)}</span>` : ''}
-    </span>
-    <span class="count">${count} ${unidad}${count !== 1 ? (unidad === 'colaborador' ? 'es' : 's') : ''}</span>
-  `;
+
+  const title = document.createElement('span');
+  title.className = 'node-title';
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'node-name' + (name === SIN_ASIGNAR ? ' empty' : '');
+  nameSpan.textContent = name;
+  title.appendChild(nameSpan);
+  if (puesto){
+    const puestoSpan = document.createElement('span');
+    puestoSpan.className = 'node-puesto';
+    puestoSpan.textContent = puesto;
+    title.appendChild(puestoSpan);
+  }
+  summary.appendChild(title);
+
+  const countSpan = document.createElement('span');
+  countSpan.className = 'count';
+  countSpan.textContent = `${count} ${unidad}${count !== 1 ? (unidad === 'colaborador' ? 'es' : 's') : ''}`;
+  summary.appendChild(countSpan);
+
+  if (onReassign && name !== SIN_ASIGNAR){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-reassign';
+    btn.textContent = '⇄ Reasignar';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onReassign();
+    });
+    summary.appendChild(btn);
+  }
+
   det.appendChild(summary);
   return det;
 }
 
-// ---------- Tabs ----------
+// ---------- Reasignación masiva de jerarquía ----------
+const NIVELES_OP = [
+  { campoNombre: 'teamLiderNombre', campoId: 'teamLiderId', campoPuesto: 'puestoTeamLider', label: 'Team Líder' },
+  { campoNombre: 'gerenteNombre', campoId: 'gerenteId', campoPuesto: 'puestoGerente', label: 'Gerente' },
+  { campoNombre: 'subgerenteNombre', campoId: 'subgerenteId', campoPuesto: 'puestoSubgerente', label: 'Subgerente' },
+  { campoNombre: 'supervisorNombre', campoId: 'supervisorId', campoPuesto: 'puestoSupervisor', label: 'Supervisor' }
+];
+const NIVELES_ADM = [
+  { campoNombre: 'directorNombre', campoId: 'directorId', campoPuesto: 'puestoDirector', label: 'Director' },
+  { campoNombre: 'gerenteAdminNombre', campoId: 'gerenteAdminId', campoPuesto: 'puestoGerenteAdmin', label: 'Gerente Administrativo' },
+  { campoNombre: 'coordinadorNombre', campoId: 'coordinadorId', campoPuesto: 'puestoCoordinador', label: 'Coordinador' },
+  { campoNombre: 'auxiliarNombre', campoId: 'auxiliarId', campoPuesto: 'puestoAuxiliar', label: 'Auxiliar' }
+];
+
+function dataFromTienda(t){
+  return {
+    teamLiderNombre: t.teamLiderNombre || '',
+    teamLiderId: t.teamLiderId || '',
+    puestoTeamLider: t.puestoTeamLider || '',
+    gerenteNombre: t.gerenteNombre || '',
+    gerenteId: t.gerenteId || '',
+    puestoGerente: t.puestoGerente || '',
+    subgerenteNombre: t.subgerenteNombre || '',
+    subgerenteId: t.subgerenteId || '',
+    puestoSubgerente: t.puestoSubgerente || '',
+    supervisorNombre: t.supervisorNombre || '',
+    supervisorId: t.supervisorId || '',
+    puestoSupervisor: t.puestoSupervisor || '',
+    idTienda: t.idTienda || '',
+    sucursal: t.sucursal || '',
+    cliente: t.cliente || '',
+    proyecto: t.proyecto || '',
+    formato: t.formato || '',
+    determinante: t.determinante || '',
+    estado: t.estado || '',
+    ciudad: t.ciudad || '',
+    tipoTienda: t.tipoTienda || '',
+    estatus: t.estatus || 'ACTIVA'
+  };
+}
+
+function dataFromColaborador(c){
+  return {
+    directorNombre: c.directorNombre || '',
+    directorId: c.directorId || '',
+    puestoDirector: c.puestoDirector || '',
+    gerenteAdminNombre: c.gerenteAdminNombre || '',
+    gerenteAdminId: c.gerenteAdminId || '',
+    puestoGerenteAdmin: c.puestoGerenteAdmin || '',
+    coordinadorNombre: c.coordinadorNombre || '',
+    coordinadorId: c.coordinadorId || '',
+    puestoCoordinador: c.puestoCoordinador || '',
+    auxiliarNombre: c.auxiliarNombre || '',
+    auxiliarId: c.auxiliarId || '',
+    puestoAuxiliar: c.puestoAuxiliar || '',
+    idEmpleado: c.idEmpleado || '',
+    nombreEmpleado: c.nombreEmpleado || '',
+    puesto: c.puesto || '',
+    departamento: c.departamento || '',
+    correo: c.correo || '',
+    telefono: c.telefono || '',
+    estatus: c.estatus || 'ACTIVO'
+  };
+}
+
+let reassignContext = null;
+const overlayReassign = $('overlay-reassign');
+const formReassign = $('form-reassign');
+
+function openReassignModal(modulo, nivelConfig, valorActual){
+  const sourceList = modulo === 'op' ? tiendas : colaboradores;
+  const registros = sourceList.filter(r => (r[nivelConfig.campoNombre] || SIN_ASIGNAR) === valorActual);
+  reassignContext = { modulo, nivelConfig, valorActual, registros };
+
+  const unidad = modulo === 'op'
+    ? (registros.length === 1 ? 'tienda' : 'tiendas')
+    : (registros.length === 1 ? 'colaborador' : 'colaboradores');
+
+  $('reassign-title').textContent = 'Reasignar: ' + valorActual;
+  $('reassign-sub').textContent = `Se moverán ${registros.length} ${unidad} de "${nivelConfig.label}" a un nuevo responsable.`;
+  formReassign.reset();
+
+  const listEl = $('list-reassign');
+  listEl.innerHTML = '';
+  [...new Set(sourceList.map(r => r[nivelConfig.campoNombre]).filter(Boolean))].sort().forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v;
+    listEl.appendChild(opt);
+  });
+
+  overlayReassign.classList.add('open');
+}
+function closeReassignModal(){ overlayReassign.classList.remove('open'); reassignContext = null; }
+
+$('cancel-reassign').addEventListener('click', closeReassignModal);
+overlayReassign.addEventListener('click', (e) => { if (e.target === overlayReassign) closeReassignModal(); });
+
+formReassign.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!reassignContext) return;
+
+  const nuevoNombre = $('reassign-nombre').value.trim();
+  const nuevoId = $('reassign-id').value.trim();
+  const nuevoPuesto = $('reassign-puesto').value.trim();
+  if (!nuevoNombre) return;
+
+  const { modulo, nivelConfig, registros } = reassignContext;
+  const saveBtn = $('save-reassign');
+  saveBtn.disabled = true;
+
+  let ok = 0, fail = 0;
+  for (let i = 0; i < registros.length; i++){
+    const r = registros[i];
+    saveBtn.textContent = `Reasignando ${i + 1}/${registros.length}...`;
+    const data = modulo === 'op' ? dataFromTienda(r) : dataFromColaborador(r);
+    data[nivelConfig.campoNombre] = nuevoNombre;
+    if (nuevoId) data[nivelConfig.campoId] = nuevoId;
+    if (nuevoPuesto) data[nivelConfig.campoPuesto] = nuevoPuesto;
+
+    try{
+      const payload = { modulo: modulo === 'op' ? 'operaciones' : 'administrativo', action: 'update', rowIndex: r.rowIndex, data };
+      const res = await fetchConTimeout(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }, FETCH_TIMEOUT_MS);
+      const result = await res.json();
+      if (result.ok) ok++; else fail++;
+    }catch(err){
+      fail++;
+    }
+  }
+
+  saveBtn.disabled = false;
+  saveBtn.textContent = 'Reasignar';
+  closeReassignModal();
+  showToast(`Reasignación completa: ${ok} actualizados${fail ? ', ' + fail + ' con error' : ' ✓'}`, fail > 0);
+
+  if (modulo === 'op') await loadOperaciones();
+  else await loadAdministrativo();
+});
+
+
 function activarTab(tab){
   document.getElementById('tab-btn-op').classList.toggle('active', tab === 'op');
   document.getElementById('tab-btn-adm').classList.toggle('active', tab === 'adm');
@@ -1094,26 +1300,26 @@ function renderTreeOp(tree, puestos, forceOpen){
 
   sortedKeys(tree).forEach(tl => {
     const gerentes = tree[tl];
-    const nodeTl = makeNode(tl, countLeaves(gerentes), 'level-1', 'tienda', forceOpen, puestos.teamLider[tl]);
+    const nodeTl = makeNode(tl, countLeaves(gerentes), 'level-1', 'tienda', forceOpen, puestos.teamLider[tl] || (tl !== SIN_ASIGNAR ? 'Team Líder' : ''), () => openReassignModal('op', NIVELES_OP[0], tl));
     const childrenTl = document.createElement('div');
     childrenTl.className = 'children';
 
     sortedKeys(gerentes).forEach(ge => {
       const subgerentes = gerentes[ge];
-      const nodeGe = makeNode(ge, countLeaves(subgerentes), 'level-2', 'tienda', forceOpen, puestos.gerente[ge]);
+      const nodeGe = makeNode(ge, countLeaves(subgerentes), 'level-2', 'tienda', forceOpen, puestos.gerente[ge] || (ge !== SIN_ASIGNAR ? 'Gerente' : ''), () => openReassignModal('op', NIVELES_OP[1], ge));
       const childrenGe = document.createElement('div');
       childrenGe.className = 'children';
 
       sortedKeys(subgerentes).forEach(sg => {
         const supervisores = subgerentes[sg];
-        const nodeSg = makeNode(sg, countLeaves(supervisores), 'level-3', 'tienda', forceOpen, puestos.subgerente[sg]);
+        const nodeSg = makeNode(sg, countLeaves(supervisores), 'level-3', 'tienda', forceOpen, puestos.subgerente[sg] || (sg !== SIN_ASIGNAR ? 'Subgerente' : ''), () => openReassignModal('op', NIVELES_OP[2], sg));
         const childrenSg = document.createElement('div');
         childrenSg.className = 'children';
 
         sortedKeys(supervisores).forEach(su => {
           const tiendasList = supervisores[su].slice().sort((a, b) =>
             (a.sucursal || '').localeCompare(b.sucursal || '', 'es'));
-          const nodeSu = makeNode(su, tiendasList.length, 'level-4', 'tienda', forceOpen, puestos.supervisor[su]);
+          const nodeSu = makeNode(su, tiendasList.length, 'level-4', 'tienda', forceOpen, puestos.supervisor[su] || (su !== SIN_ASIGNAR ? 'Supervisor' : ''), () => openReassignModal('op', NIVELES_OP[3], su));
           const wrap = document.createElement('div');
           wrap.className = 'children leaf-list';
           tiendasList.forEach(t => wrap.appendChild(renderTienda(t)));
@@ -1436,26 +1642,26 @@ function renderTreeAdm(tree, puestos, forceOpen){
 
   sortedKeys(tree).forEach(di => {
     const gerentes = tree[di];
-    const nodeDi = makeNode(di, countLeaves(gerentes), 'level-1', 'colaborador', forceOpen, puestos.director[di]);
+    const nodeDi = makeNode(di, countLeaves(gerentes), 'level-1', 'colaborador', forceOpen, puestos.director[di] || (di !== SIN_ASIGNAR ? 'Director' : ''), () => openReassignModal('adm', NIVELES_ADM[0], di));
     const childrenDi = document.createElement('div');
     childrenDi.className = 'children';
 
     sortedKeys(gerentes).forEach(ga => {
       const coordinadores = gerentes[ga];
-      const nodeGa = makeNode(ga, countLeaves(coordinadores), 'level-2', 'colaborador', forceOpen, puestos.gerenteAdmin[ga]);
+      const nodeGa = makeNode(ga, countLeaves(coordinadores), 'level-2', 'colaborador', forceOpen, puestos.gerenteAdmin[ga] || (ga !== SIN_ASIGNAR ? 'Gerente Administrativo' : ''), () => openReassignModal('adm', NIVELES_ADM[1], ga));
       const childrenGa = document.createElement('div');
       childrenGa.className = 'children';
 
       sortedKeys(coordinadores).forEach(co => {
         const auxiliares = coordinadores[co];
-        const nodeCo = makeNode(co, countLeaves(auxiliares), 'level-3', 'colaborador', forceOpen, puestos.coordinador[co]);
+        const nodeCo = makeNode(co, countLeaves(auxiliares), 'level-3', 'colaborador', forceOpen, puestos.coordinador[co] || (co !== SIN_ASIGNAR ? 'Coordinador' : ''), () => openReassignModal('adm', NIVELES_ADM[2], co));
         const childrenCo = document.createElement('div');
         childrenCo.className = 'children';
 
         sortedKeys(auxiliares).forEach(au => {
           const lista = auxiliares[au].slice().sort((a, b) =>
             (a.nombreEmpleado || '').localeCompare(b.nombreEmpleado || '', 'es'));
-          const nodeAu = makeNode(au, lista.length, 'level-4', 'colaborador', forceOpen, puestos.auxiliar[au]);
+          const nodeAu = makeNode(au, lista.length, 'level-4', 'colaborador', forceOpen, puestos.auxiliar[au] || (au !== SIN_ASIGNAR ? 'Auxiliar' : ''), () => openReassignModal('adm', NIVELES_ADM[3], au));
           const wrap = document.createElement('div');
           wrap.className = 'children leaf-list';
           lista.forEach(c => wrap.appendChild(renderColaborador(c)));
