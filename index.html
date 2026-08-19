@@ -308,6 +308,42 @@
   .leaf-row .t-name{font-weight:600;flex-shrink:0;}
   .leaf-row .t-meta{color:var(--text-dim);font-size:12px;}
 
+  /* ---------- Módulo de cambios recientes ---------- */
+  .cambios-section{margin-top:32px;}
+  .cambios-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .cambio-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:11px 14px;
+    font-size:13px;
+    flex-wrap:wrap;
+  }
+  .badge-cambio{
+    font-size:10px;
+    font-weight:700;
+    padding:3px 9px;
+    border-radius:20px;
+    text-transform:uppercase;
+    letter-spacing:.3px;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .badge-nuevo-cambio{background:#dbeafe;color:#1d5fb3;}
+  [data-theme="dark"] .badge-nuevo-cambio{background:#152a42;color:#7fb1ec;}
+  .badge-actualizado-cambio{background:#fef3c7;color:#a15c07;}
+  [data-theme="dark"] .badge-actualizado-cambio{background:#3a2c0d;color:#f0c674;}
+  .cambio-nombre{font-weight:600;flex-shrink:0;}
+  .cambio-meta{color:var(--text-dim);flex:1;min-width:120px;}
+  .cambio-fecha{color:var(--text-dim);font-size:12px;white-space:nowrap;flex-shrink:0;margin-left:auto;}
+
   /* Modal */
   .overlay{
     display:none;
@@ -446,6 +482,11 @@
     <div class="loading-msg" id="loading-op">Cargando tiendas...</div>
     <div class="empty-msg" id="empty-op" style="display:none;">No se encontraron tiendas con esos filtros.</div>
     <div id="grid-op"></div>
+
+    <div class="panel-header cambios-section">
+      <h2>🕓 Cambios recientes (últimos 7 días)</h2>
+    </div>
+    <div class="cambios-list" id="cambios-op"></div>
   </section>
 
   <!-- ================= PANEL ADMINISTRATIVO ================= -->
@@ -476,6 +517,11 @@
     <div class="loading-msg" id="loading-adm">Cargando colaboradores...</div>
     <div class="empty-msg" id="empty-adm" style="display:none;">No se encontraron colaboradores con esos filtros.</div>
     <div id="grid-adm"></div>
+
+    <div class="panel-header cambios-section">
+      <h2>🕓 Cambios recientes (últimos 7 días)</h2>
+    </div>
+    <div class="cambios-list" id="cambios-adm"></div>
   </section>
 
 </main>
@@ -783,6 +829,44 @@ function esNueva(fechaCreacion){
   return diffDias >= 0 && diffDias <= DIAS_CONSIDERADA_NUEVA;
 }
 
+// ---------- Módulo de cambios recientes ----------
+function getCambiosRecientes(list, mapFn){
+  const dentroDeRango = (d) => {
+    if (!d) return false;
+    const diffDias = (Date.now() - d.getTime()) / 86400000;
+    return diffDias >= 0 && diffDias <= DIAS_CONSIDERADA_NUEVA;
+  };
+  const cambios = [];
+  list.forEach(item => {
+    const fc = parseFecha(item.fechaCreacion);
+    const fm = parseFecha(item.fechaModificacion);
+    const esModificado = dentroDeRango(fm) && (!fc || Math.abs(fm.getTime() - fc.getTime()) > 60000);
+    if (esModificado){
+      cambios.push({ tipo: 'actualizado', fecha: fm, ...mapFn(item) });
+    } else if (dentroDeRango(fc)){
+      cambios.push({ tipo: 'nuevo', fecha: fc, ...mapFn(item) });
+    }
+  });
+  cambios.sort((a, b) => b.fecha - a.fecha);
+  return cambios;
+}
+
+function renderCambiosRecientes(containerId, cambios){
+  const el = $(containerId);
+  if (cambios.length === 0){
+    el.innerHTML = '<div class="empty-msg" style="padding:24px 20px;">Sin cambios en los últimos ' + DIAS_CONSIDERADA_NUEVA + ' días.</div>';
+    return;
+  }
+  el.innerHTML = cambios.map(c => `
+    <div class="cambio-row">
+      <span class="badge-cambio ${c.tipo === 'nuevo' ? 'badge-nuevo-cambio' : 'badge-actualizado-cambio'}">${c.tipo === 'nuevo' ? 'Nuevo' : 'Actualizado'}</span>
+      <span class="cambio-nombre">${escapeHtml(c.nombre)}</span>
+      <span class="cambio-meta">${escapeHtml(c.meta)}</span>
+      <span class="cambio-fecha">${formatFecha(c.fecha)}</span>
+    </div>
+  `).join('');
+}
+
 function escapeHtml(str){
   return String(str ?? '').replace(/[&<>"']/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -861,6 +945,10 @@ async function loadOperaciones(){
     populateFiltersOp();
     renderSummaryOp();
     applyFiltersOp();
+    renderCambiosRecientes('cambios-op', getCambiosRecientes(tiendas, t => ({
+      nombre: t.sucursal || 'Sin nombre',
+      meta: [t.cliente, t.ciudad, t.idTienda ? 'ID ' + t.idTienda : ''].filter(Boolean).join(' · ')
+    })));
     $('tab-count-op').textContent = tiendas.length;
   }catch(err){
     if (err.name === 'AbortError'){
@@ -1187,6 +1275,10 @@ async function loadAdministrativo(){
     populateFiltersAdm();
     renderSummaryAdm();
     applyFiltersAdm();
+    renderCambiosRecientes('cambios-adm', getCambiosRecientes(colaboradores, c => ({
+      nombre: c.nombreEmpleado || 'Sin nombre',
+      meta: [c.puesto, c.departamento].filter(Boolean).join(' · ')
+    })));
     $('tab-count-adm').textContent = colaboradores.length;
   }catch(err){
     if (err.name === 'AbortError'){
