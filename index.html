@@ -548,12 +548,20 @@
             <input type="text" id="teamLiderId" placeholder="Ej. BMEXH4017">
           </div>
           <div class="field">
+            <label>Puesto del Team Líder</label>
+            <input type="text" id="puestoTeamLider" placeholder="Ej. Team Líder de Operaciones">
+          </div>
+          <div class="field">
             <label>Gerente</label>
             <input type="text" id="gerenteNombre" list="list-gerente" placeholder="Nombre completo">
           </div>
           <div class="field">
             <label>ID Gerente</label>
             <input type="text" id="gerenteId" placeholder="Ej. BMEXS472">
+          </div>
+          <div class="field">
+            <label>Puesto del Gerente</label>
+            <input type="text" id="puestoGerente" placeholder="Ej. Gerente de Operaciones">
           </div>
           <div class="field">
             <label>Subgerente</label>
@@ -564,12 +572,20 @@
             <input type="text" id="subgerenteId" placeholder="Ej. BMEXS472">
           </div>
           <div class="field">
+            <label>Puesto del Subgerente</label>
+            <input type="text" id="puestoSubgerente" placeholder="Ej. Subgerente de Operaciones">
+          </div>
+          <div class="field">
             <label>Supervisor</label>
             <input type="text" id="supervisorNombre" list="list-supervisor" placeholder="Nombre completo">
           </div>
           <div class="field">
             <label>ID Supervisor</label>
             <input type="text" id="supervisorId" placeholder="Ej. BMEXS381">
+          </div>
+          <div class="field">
+            <label>Puesto del Supervisor</label>
+            <input type="text" id="puestoSupervisor" placeholder="Ej. Supervisor de Tienda">
           </div>
         </div>
       </div>
@@ -1022,7 +1038,8 @@ function applyFiltersOp(){
     if (!q) return true;
     const haystack = [
       t.sucursal, t.cliente, t.ciudad, t.estado, t.idTienda,
-      t.teamLiderNombre, t.gerenteNombre, t.subgerenteNombre, t.supervisorNombre
+      t.teamLiderNombre, t.puestoTeamLider, t.gerenteNombre, t.puestoGerente,
+      t.subgerenteNombre, t.puestoSubgerente, t.supervisorNombre, t.puestoSupervisor
     ].join(' ').toLowerCase();
     return haystack.includes(q);
   });
@@ -1036,6 +1053,7 @@ $('refresh-op').addEventListener('click', loadOperaciones);
 
 function buildTreeOp(list){
   const tree = {};
+  const puestos = { teamLider:{}, gerente:{}, subgerente:{}, supervisor:{} };
   list.forEach(t => {
     const tl = t.teamLiderNombre || SIN_ASIGNAR;
     const ge = t.gerenteNombre || SIN_ASIGNAR;
@@ -1046,8 +1064,12 @@ function buildTreeOp(list){
     tree[tl][ge][sg] = tree[tl][ge][sg] || {};
     tree[tl][ge][sg][su] = tree[tl][ge][sg][su] || [];
     tree[tl][ge][sg][su].push(t);
+    if (t.puestoTeamLider && !puestos.teamLider[tl]) puestos.teamLider[tl] = t.puestoTeamLider;
+    if (t.puestoGerente && !puestos.gerente[ge]) puestos.gerente[ge] = t.puestoGerente;
+    if (t.puestoSubgerente && !puestos.subgerente[sg]) puestos.subgerente[sg] = t.puestoSubgerente;
+    if (t.puestoSupervisor && !puestos.supervisor[su]) puestos.supervisor[su] = t.puestoSupervisor;
   });
-  return tree;
+  return { tree, puestos };
 }
 
 function renderTienda(t){
@@ -1066,32 +1088,32 @@ function renderTienda(t){
   return row;
 }
 
-function renderTreeOp(tree, forceOpen){
+function renderTreeOp(tree, puestos, forceOpen){
   const container = document.createElement('div');
   container.className = 'tree';
 
   sortedKeys(tree).forEach(tl => {
     const gerentes = tree[tl];
-    const nodeTl = makeNode(tl, countLeaves(gerentes), 'level-1', 'tienda', forceOpen);
+    const nodeTl = makeNode(tl, countLeaves(gerentes), 'level-1', 'tienda', forceOpen, puestos.teamLider[tl]);
     const childrenTl = document.createElement('div');
     childrenTl.className = 'children';
 
     sortedKeys(gerentes).forEach(ge => {
       const subgerentes = gerentes[ge];
-      const nodeGe = makeNode(ge, countLeaves(subgerentes), 'level-2', 'tienda', forceOpen);
+      const nodeGe = makeNode(ge, countLeaves(subgerentes), 'level-2', 'tienda', forceOpen, puestos.gerente[ge]);
       const childrenGe = document.createElement('div');
       childrenGe.className = 'children';
 
       sortedKeys(subgerentes).forEach(sg => {
         const supervisores = subgerentes[sg];
-        const nodeSg = makeNode(sg, countLeaves(supervisores), 'level-3', 'tienda', forceOpen);
+        const nodeSg = makeNode(sg, countLeaves(supervisores), 'level-3', 'tienda', forceOpen, puestos.subgerente[sg]);
         const childrenSg = document.createElement('div');
         childrenSg.className = 'children';
 
         sortedKeys(supervisores).forEach(su => {
           const tiendasList = supervisores[su].slice().sort((a, b) =>
             (a.sucursal || '').localeCompare(b.sucursal || '', 'es'));
-          const nodeSu = makeNode(su, tiendasList.length, 'level-4', 'tienda', forceOpen);
+          const nodeSu = makeNode(su, tiendasList.length, 'level-4', 'tienda', forceOpen, puestos.supervisor[su]);
           const wrap = document.createElement('div');
           wrap.className = 'children leaf-list';
           tiendasList.forEach(t => wrap.appendChild(renderTienda(t)));
@@ -1123,8 +1145,8 @@ function renderGridOp(list){
   }
   $('empty-op').style.display = 'none';
   const hasActiveFilter = !!($('search-op').value.trim() || $('filter-cliente-op').value || $('filter-estatus-op').value);
-  const tree = buildTreeOp(list);
-  grid.appendChild(renderTreeOp(tree, hasActiveFilter));
+  const { tree, puestos } = buildTreeOp(list);
+  grid.appendChild(renderTreeOp(tree, puestos, hasActiveFilter));
 }
 
 $('expand-op').addEventListener('click', () => {
@@ -1148,12 +1170,16 @@ function openModalOp(tienda){
     $('rowIndex-op').value = tienda.rowIndex;
     $('teamLiderNombre').value = tienda.teamLiderNombre || '';
     $('teamLiderId').value = tienda.teamLiderId || '';
+    $('puestoTeamLider').value = tienda.puestoTeamLider || '';
     $('gerenteNombre').value = tienda.gerenteNombre || '';
     $('gerenteId').value = tienda.gerenteId || '';
+    $('puestoGerente').value = tienda.puestoGerente || '';
     $('subgerenteNombre').value = tienda.subgerenteNombre || '';
     $('subgerenteId').value = tienda.subgerenteId || '';
+    $('puestoSubgerente').value = tienda.puestoSubgerente || '';
     $('supervisorNombre').value = tienda.supervisorNombre || '';
     $('supervisorId').value = tienda.supervisorId || '';
+    $('puestoSupervisor').value = tienda.puestoSupervisor || '';
     $('idTienda').value = tienda.idTienda || '';
     $('sucursal').value = tienda.sucursal || '';
     $('cliente').value = tienda.cliente || '';
@@ -1195,12 +1221,16 @@ formOp.addEventListener('submit', async (e) => {
   const data = {
     teamLiderNombre: $('teamLiderNombre').value.trim(),
     teamLiderId: $('teamLiderId').value.trim(),
+    puestoTeamLider: $('puestoTeamLider').value.trim(),
     gerenteNombre: $('gerenteNombre').value.trim(),
     gerenteId: $('gerenteId').value.trim(),
+    puestoGerente: $('puestoGerente').value.trim(),
     subgerenteNombre: $('subgerenteNombre').value.trim(),
     subgerenteId: $('subgerenteId').value.trim(),
+    puestoSubgerente: $('puestoSubgerente').value.trim(),
     supervisorNombre: $('supervisorNombre').value.trim(),
     supervisorId: $('supervisorId').value.trim(),
+    puestoSupervisor: $('puestoSupervisor').value.trim(),
     idTienda: $('idTienda').value.trim(),
     sucursal: $('sucursal').value.trim(),
     cliente: $('cliente').value.trim(),
