@@ -253,8 +253,17 @@
     flex-shrink:0;
   }
   .node[open] > summary::before{transform:rotate(90deg);}
-  .node .node-name{flex:1;font-weight:600;}
+  .node .node-name{font-weight:600;}
   .node .node-name.empty{color:var(--text-dim);font-style:italic;font-weight:500;}
+  .node .node-title{flex:1;display:flex;align-items:baseline;gap:8px;min-width:0;}
+  .node .node-puesto{
+    font-size:11.5px;
+    font-weight:500;
+    color:var(--text-dim);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
   .node .count{
     font-size:11px;
     color:var(--accent);
@@ -603,12 +612,20 @@
             <input type="text" id="directorId" placeholder="Ej. BMEXH4017">
           </div>
           <div class="field">
+            <label>Puesto del Director</label>
+            <input type="text" id="puestoDirector" placeholder="Ej. Director de Administración">
+          </div>
+          <div class="field">
             <label>Gerente Administrativo</label>
             <input type="text" id="gerenteAdminNombre" list="list-gerenteadmin" placeholder="Nombre completo">
           </div>
           <div class="field">
             <label>ID Gerente Administrativo</label>
             <input type="text" id="gerenteAdminId" placeholder="Ej. BMEXS472">
+          </div>
+          <div class="field">
+            <label>Puesto del Gerente Administrativo</label>
+            <input type="text" id="puestoGerenteAdmin" placeholder="Ej. Gerente Administrativo">
           </div>
           <div class="field">
             <label>Coordinador</label>
@@ -619,12 +636,20 @@
             <input type="text" id="coordinadorId" placeholder="Ej. BMEXS472">
           </div>
           <div class="field">
+            <label>Puesto del Coordinador</label>
+            <input type="text" id="puestoCoordinador" placeholder="Ej. Coordinador Administrativo">
+          </div>
+          <div class="field">
             <label>Auxiliar</label>
             <input type="text" id="auxiliarNombre" list="list-auxiliar" placeholder="Nombre completo">
           </div>
           <div class="field">
             <label>ID Auxiliar</label>
             <input type="text" id="auxiliarId" placeholder="Ej. BMEXS381">
+          </div>
+          <div class="field">
+            <label>Puesto del Auxiliar</label>
+            <input type="text" id="puestoAuxiliar" placeholder="Ej. Auxiliar Administrativo">
           </div>
         </div>
       </div>
@@ -777,13 +802,16 @@ function countLeaves(node){
   return Object.values(node).reduce((sum, child) => sum + countLeaves(child), 0);
 }
 
-function makeNode(name, count, levelClass, unidad, forceOpen){
+function makeNode(name, count, levelClass, unidad, forceOpen, puesto){
   const det = document.createElement('details');
   det.className = 'node ' + levelClass;
   if (forceOpen) det.open = true;
   const summary = document.createElement('summary');
   summary.innerHTML = `
-    <span class="node-name ${name === SIN_ASIGNAR ? 'empty' : ''}">${escapeHtml(name)}</span>
+    <span class="node-title">
+      <span class="node-name ${name === SIN_ASIGNAR ? 'empty' : ''}">${escapeHtml(name)}</span>
+      ${puesto ? `<span class="node-puesto">${escapeHtml(puesto)}</span>` : ''}
+    </span>
     <span class="count">${count} ${unidad}${count !== 1 ? (unidad === 'colaborador' ? 'es' : 's') : ''}</span>
   `;
   det.appendChild(summary);
@@ -1230,7 +1258,8 @@ function applyFiltersAdm(){
     if (!q) return true;
     const haystack = [
       c.nombreEmpleado, c.puesto, c.departamento, c.correo, c.idEmpleado,
-      c.directorNombre, c.gerenteAdminNombre, c.coordinadorNombre, c.auxiliarNombre
+      c.directorNombre, c.puestoDirector, c.gerenteAdminNombre, c.puestoGerenteAdmin,
+      c.coordinadorNombre, c.puestoCoordinador, c.auxiliarNombre, c.puestoAuxiliar
     ].join(' ').toLowerCase();
     return haystack.includes(q);
   });
@@ -1244,6 +1273,7 @@ $('refresh-adm').addEventListener('click', loadAdministrativo);
 
 function buildTreeAdm(list){
   const tree = {};
+  const puestos = { director:{}, gerenteAdmin:{}, coordinador:{}, auxiliar:{} };
   list.forEach(c => {
     const di = c.directorNombre || SIN_ASIGNAR;
     const ga = c.gerenteAdminNombre || SIN_ASIGNAR;
@@ -1254,8 +1284,12 @@ function buildTreeAdm(list){
     tree[di][ga][co] = tree[di][ga][co] || {};
     tree[di][ga][co][au] = tree[di][ga][co][au] || [];
     tree[di][ga][co][au].push(c);
+    if (c.puestoDirector && !puestos.director[di]) puestos.director[di] = c.puestoDirector;
+    if (c.puestoGerenteAdmin && !puestos.gerenteAdmin[ga]) puestos.gerenteAdmin[ga] = c.puestoGerenteAdmin;
+    if (c.puestoCoordinador && !puestos.coordinador[co]) puestos.coordinador[co] = c.puestoCoordinador;
+    if (c.puestoAuxiliar && !puestos.auxiliar[au]) puestos.auxiliar[au] = c.puestoAuxiliar;
   });
-  return tree;
+  return { tree, puestos };
 }
 
 function renderColaborador(c){
@@ -1274,32 +1308,32 @@ function renderColaborador(c){
   return row;
 }
 
-function renderTreeAdm(tree, forceOpen){
+function renderTreeAdm(tree, puestos, forceOpen){
   const container = document.createElement('div');
   container.className = 'tree';
 
   sortedKeys(tree).forEach(di => {
     const gerentes = tree[di];
-    const nodeDi = makeNode(di, countLeaves(gerentes), 'level-1', 'colaborador', forceOpen);
+    const nodeDi = makeNode(di, countLeaves(gerentes), 'level-1', 'colaborador', forceOpen, puestos.director[di]);
     const childrenDi = document.createElement('div');
     childrenDi.className = 'children';
 
     sortedKeys(gerentes).forEach(ga => {
       const coordinadores = gerentes[ga];
-      const nodeGa = makeNode(ga, countLeaves(coordinadores), 'level-2', 'colaborador', forceOpen);
+      const nodeGa = makeNode(ga, countLeaves(coordinadores), 'level-2', 'colaborador', forceOpen, puestos.gerenteAdmin[ga]);
       const childrenGa = document.createElement('div');
       childrenGa.className = 'children';
 
       sortedKeys(coordinadores).forEach(co => {
         const auxiliares = coordinadores[co];
-        const nodeCo = makeNode(co, countLeaves(auxiliares), 'level-3', 'colaborador', forceOpen);
+        const nodeCo = makeNode(co, countLeaves(auxiliares), 'level-3', 'colaborador', forceOpen, puestos.coordinador[co]);
         const childrenCo = document.createElement('div');
         childrenCo.className = 'children';
 
         sortedKeys(auxiliares).forEach(au => {
           const lista = auxiliares[au].slice().sort((a, b) =>
             (a.nombreEmpleado || '').localeCompare(b.nombreEmpleado || '', 'es'));
-          const nodeAu = makeNode(au, lista.length, 'level-4', 'colaborador', forceOpen);
+          const nodeAu = makeNode(au, lista.length, 'level-4', 'colaborador', forceOpen, puestos.auxiliar[au]);
           const wrap = document.createElement('div');
           wrap.className = 'children leaf-list';
           lista.forEach(c => wrap.appendChild(renderColaborador(c)));
@@ -1331,8 +1365,8 @@ function renderGridAdm(list){
   }
   $('empty-adm').style.display = 'none';
   const hasActiveFilter = !!($('search-adm').value.trim() || $('filter-departamento-adm').value || $('filter-estatus-adm').value);
-  const tree = buildTreeAdm(list);
-  grid.appendChild(renderTreeAdm(tree, hasActiveFilter));
+  const { tree, puestos } = buildTreeAdm(list);
+  grid.appendChild(renderTreeAdm(tree, puestos, hasActiveFilter));
 }
 
 $('expand-adm').addEventListener('click', () => {
@@ -1356,12 +1390,16 @@ function openModalAdm(colaborador){
     $('rowIndex-adm').value = colaborador.rowIndex;
     $('directorNombre').value = colaborador.directorNombre || '';
     $('directorId').value = colaborador.directorId || '';
+    $('puestoDirector').value = colaborador.puestoDirector || '';
     $('gerenteAdminNombre').value = colaborador.gerenteAdminNombre || '';
     $('gerenteAdminId').value = colaborador.gerenteAdminId || '';
+    $('puestoGerenteAdmin').value = colaborador.puestoGerenteAdmin || '';
     $('coordinadorNombre').value = colaborador.coordinadorNombre || '';
     $('coordinadorId').value = colaborador.coordinadorId || '';
+    $('puestoCoordinador').value = colaborador.puestoCoordinador || '';
     $('auxiliarNombre').value = colaborador.auxiliarNombre || '';
     $('auxiliarId').value = colaborador.auxiliarId || '';
+    $('puestoAuxiliar').value = colaborador.puestoAuxiliar || '';
     $('idEmpleado').value = colaborador.idEmpleado || '';
     $('nombreEmpleado').value = colaborador.nombreEmpleado || '';
     $('puesto').value = colaborador.puesto || '';
@@ -1400,12 +1438,16 @@ formAdm.addEventListener('submit', async (e) => {
   const data = {
     directorNombre: $('directorNombre').value.trim(),
     directorId: $('directorId').value.trim(),
+    puestoDirector: $('puestoDirector').value.trim(),
     gerenteAdminNombre: $('gerenteAdminNombre').value.trim(),
     gerenteAdminId: $('gerenteAdminId').value.trim(),
+    puestoGerenteAdmin: $('puestoGerenteAdmin').value.trim(),
     coordinadorNombre: $('coordinadorNombre').value.trim(),
     coordinadorId: $('coordinadorId').value.trim(),
+    puestoCoordinador: $('puestoCoordinador').value.trim(),
     auxiliarNombre: $('auxiliarNombre').value.trim(),
     auxiliarId: $('auxiliarId').value.trim(),
+    puestoAuxiliar: $('puestoAuxiliar').value.trim(),
     idEmpleado: $('idEmpleado').value.trim(),
     nombreEmpleado: $('nombreEmpleado').value.trim(),
     puesto: $('puesto').value.trim(),
