@@ -737,7 +737,7 @@
           </div>
           <div class="field">
             <label>Sucursal</label>
-            <input type="text" id="sucursal" placeholder="Nombre de la sucursal" required>
+            <input type="text" id="sucursal" list="list-sucursal" placeholder="Nombre de la sucursal" required>
           </div>
           <div class="field">
             <label>Cliente</label>
@@ -973,6 +973,7 @@
 <datalist id="list-puesto"></datalist>
 <datalist id="list-departamento"></datalist>
 <datalist id="list-empleado"></datalist>
+<datalist id="list-sucursal"></datalist>
 
 <div class="toast" id="toast"></div>
 
@@ -1014,7 +1015,8 @@ const CREDENCIALES_EDICION = [
   { usuario: 'BMEXM4600', password: 'PEMU910507' },
   { usuario: 'BMEXS5449', password: 'RIRA870803' },
   { usuario: 'BMEXS5735', password: 'VADM851114' },
-  { usuario: 'BMEXH4017', password: 'MAAD931215' }
+  { usuario: 'BMEXH4017', password: 'MAAD931215' },
+  { usuario: 'BMEXS1795', password: 'RESA950115' }
 ];
 const AUTH_STORAGE_KEY = 'organigrama_sesion';
 
@@ -2388,10 +2390,110 @@ function inicializarAutocompletadoPersonas(){
   wireAutocompletePersona('reassign-nombre', 'reassign-id', 'reassign-puesto', 'list-reassign', { mantenerOpcionesPrevias: true });
 }
 
+/* ============================================================
+   AUTOCOMPLETADO DE TIENDA (catálogo hoja "TIENDAS")
+   Al teclear la sucursal, se muestra un desplegable con las
+   coincidencias del catálogo y, al elegir una, se llenan ID Tienda,
+   Cliente, Proyecto, Formato, Determinante, Estado, Ciudad y Tipo
+   de tienda. Para distinguir sucursales con el mismo nombre, cada
+   opción se muestra como "Sucursal Cliente (Determinante)",
+   ej. "UNIVERSIDAD WALMART (1234)".
+   ============================================================ */
+let catalogoTiendas = [];
+
+function urlCatalogoTiendas(){
+  const sep = APPS_SCRIPT_URL.includes('?') ? '&' : '?';
+  return APPS_SCRIPT_URL + sep + 'catalogo=tiendas';
+}
+
+async function cargarCatalogoTiendas(){
+  try{
+    const res = await fetchConTimeout(urlCatalogoTiendas(), {}, FETCH_TIMEOUT_MS);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Error desconocido del backend');
+    catalogoTiendas = data.catalogoTiendas || [];
+  }catch(err){
+    // Si falla, simplemente no habrá autocompletado; el resto de la app sigue funcionando.
+    console.warn('No se pudo cargar el catálogo de tiendas:', err.message);
+  }
+}
+
+// Texto que se muestra en el desplegable, para distinguir sucursales
+// con el mismo nombre pero distinto cliente/determinante.
+function textoOpcionTienda(t){
+  let texto = t.sucursal || '';
+  if (t.cliente) texto += (texto ? ' ' : '') + t.cliente;
+  if (t.determinante) texto += ` (${t.determinante})`;
+  return texto.trim();
+}
+
+function wireAutocompleteTienda(sucursalInputId, camposDestino, datalistId){
+  const inputSucursal = $(sucursalInputId);
+  const datalist = $(datalistId);
+  if (!inputSucursal || !datalist) return;
+
+  inputSucursal.addEventListener('input', () => {
+    const crudo = inputSucursal.value.trim();
+    const q = crudo.toLowerCase();
+    datalist.innerHTML = '';
+
+    if (q){
+      const coincidencias = catalogoTiendas.filter(t => (t.sucursal || '').toLowerCase().includes(q)).slice(0, 30);
+      const vistos = new Set();
+      coincidencias.forEach(t => {
+        const texto = textoOpcionTienda(t);
+        if (!texto || vistos.has(texto)) return;
+        vistos.add(texto);
+        const opt = document.createElement('option');
+        opt.value = texto;
+        datalist.appendChild(opt);
+      });
+    }
+
+    // Coincidencia exacta: por el texto completo mostrado en el desplegable
+    // (viene de elegir una opción), o por sucursal sola si es única en el catálogo.
+    let exacto = catalogoTiendas.find(t => textoOpcionTienda(t).toLowerCase() === q);
+    if (!exacto){
+      const porSucursal = catalogoTiendas.filter(t => (t.sucursal || '').toLowerCase() === q);
+      if (porSucursal.length === 1) exacto = porSucursal[0];
+    }
+
+    if (exacto){
+      inputSucursal.value = exacto.sucursal || ''; // deja el campo solo con el nombre de la sucursal
+      Object.keys(camposDestino).forEach(campo => {
+        const el = $(camposDestino[campo]);
+        if (!el) return;
+        const valor = exacto[campo] || '';
+        if (el.tagName === 'SELECT'){
+          const opcion = [...el.options].find(o => o.value.toLowerCase() === String(valor).toLowerCase());
+          if (opcion) el.value = opcion.value;
+        } else {
+          el.value = valor;
+        }
+      });
+    }
+  });
+}
+
+function inicializarAutocompletadoTienda(){
+  wireAutocompleteTienda('sucursal', {
+    idTienda: 'idTienda',
+    cliente: 'cliente',
+    proyecto: 'proyecto',
+    formato: 'formato',
+    determinante: 'determinante',
+    estado: 'estado',
+    ciudad: 'ciudad',
+    tipoTienda: 'tipoTienda'
+  }, 'list-sucursal');
+}
+
 // ---------- Init ----------
 actualizarUiAuth();
 inicializarAutocompletadoPersonas();
+inicializarAutocompletadoTienda();
 cargarCatalogoUsuarios();
+cargarCatalogoTiendas();
 loadOperaciones(); // el módulo Administrativo se carga la primera vez que se abre su pestaña
 </script>
 
